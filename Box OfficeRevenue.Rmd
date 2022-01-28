@@ -1,0 +1,345 @@
+---
+title: "Predicting box office Revenue"
+author: "Dennis Mugendi"
+date: "16/10/2021"
+output: 
+  html_document:
+    df_print: default
+    highlight: tango
+    theme: readable
+    toc: yes
+  
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+   message = FALSE,
+   warning = FALSE)
+```
+
+# Introduction
+1. Exploratory data analysis,
+2. Feature engineering,
+3. Treating missing values, and 
+4. Machine learning using Random Forest.
+
+Loading the required packages.
+```{r}
+library(tidyverse)
+library(plotly)
+library(ggthemes)
+library(viridis)
+library(corrplot)
+library(gridExtra)# Grids for visualization
+library(VIM)
+library(lubridate)# Working with  dates
+library(randomForest)
+```
+
+Read in the  data.
+```{r}
+train_data = read.csv("C:/Users/adm/Documents/Datasets/Post office/train.csv",na.strings = c("","#N/A","[]","0"))
+test_data = read.csv("C:/Users/adm/Documents/Datasets/Post office/test.csv",na.strings = c("","#N/A","[]","0"))
+
+full_data <-bind_rows(train_data,test_data)
+```
+<br>
+
+Taking a glimpse of the data.
+```{r}
+glimpse(full_data)
+```
+
+A lot of these  variables ( e.g., `belongs_to_collection`, `genres`, and `cast`) look quite messy.Because of this i will use *regular expressions* and extract the appropriate information before using them in the model.
+
+<br>
+
+# Exploratory Data Analysis
+
+Plotting the existing variables `budget`, `runtime`, and `popularity` in order to see  their relation to the prediction variable  revenue.
+
+```{r echo=FALSE, fig.show='hold', out.width=c('33%','34%','33%')}
+# Budget
+ggplot(full_data[1:3000,],aes(x=budget,y=revenue,color=budget))+
+  geom_point()+
+  #scale_color_gradient(low="grey10",high= "grey75")+
+  scale_color_viridis(begin=0, end = .95,option='D')+
+  geom_smooth(method = 'lm',color='red3',fill="red3")+
+  scale_y_continuous(breaks = c(0,500000000,1000000000,1500000000),
+                     labels= c("$0","$500","$1000","$1500"))+
+  theme_classic()+
+  theme(legend.position = "none")+
+  labs(title="Revenue by Budget",x="Runtime",y="Revenue(Millions)")
+
+# Runtime
+ggplot(full_data[1:3000,],aes(x= runtime,y=revenue,color=runtime))+
+  geom_point()+
+  #scale_color_gradient(low="grey10",high= "grey75")+
+  scale_color_viridis(begin=0, end = .95,option='D')+
+  geom_smooth(method = 'lm',color='red3',fill="red3")+
+  scale_y_continuous(breaks = c(0,500000000,1000000000,1500000000),
+                     labels= c("$0","$500","$1000","$1500"))+
+  theme_classic()+
+  theme(legend.position = "none")+
+  labs(title="Revenue by runtime",x="Runtime",y="Revenue(Millions)")
+
+# Popularity
+ggplot(full_data[1:3000,],aes(x=popularity,y=revenue,color=popularity))+
+  geom_point()+
+  #scale_color_gradient(low="grey10",high= "grey75")+
+  scale_color_viridis(begin=0, end = .95,option='D')+
+  geom_smooth(method = 'lm',color='red3',fill="red3")+
+  scale_y_continuous(breaks = c(0,500000000,1000000000,1500000000),
+                     labels= c("$0","$500","$1000","$1500"))+
+  theme_classic()+
+  theme(legend.position = "none")+
+  labs(title="Revenue by Popularity",x="Runtime",y="Revenue(Millions)")
+
+```
+  
+Some clear trends are an increase in budget and budget tend to lead to higher revenue. Runtime seems to show this trend although its not as  strong.
+
+<br>
+
+# Feature Engineering.
+
+## Collection
+The strings  in `belongs_to_collection` are messy and contain unneeded information. Using regular expression to extract  the collection names from these strings.
+```{r}
+full_data$collection_name<-str_extract(full_data$belongs_to_collection,
+                                       pattern = "(?<=name\\'\\:\\s{1}\\').+(?=\\'\\,\\s{1}\\'poster)")
+```
+
+Having  extracted the collection name lets check the biggest collection.
+```{r rows.print = 5}
+full_data[1:3000,] %>%
+  group_by(collection_name) %>%
+  summarise(movie_count=n()) %>%
+  arrange(desc(movie_count)) %>%
+  filter(!is.na(collection_name)) %>%
+  head(10)
+```
+
+As each collection is small will engineer a new variable that consist of either being in a collection or not being in a collection.
+```{r}
+full_data$collection[!is.na(full_data$belongs_to_collection)] <- 'Collection'
+full_data$collection[is.na(full_data$belongs_to_collection)] <- 
+'No Collection'
+```
+
+Plotting the new variables  to visualize how the two levels differ on revenue.
+
+```{r out.width=c('50%', '50%'), fig.show='hold', echo=FALSE}
+# Box plot of collection
+ggplot(data = full_data[1:3000,], aes(x=collection, y= revenue ,fill=collection))+
+  geom_boxplot()+
+  scale_fill_viridis(discrete = TRUE, option = 'D' , begin = 0.3 ,end = .8)+
+  scale_y_continuous(breaks = c(0,500000000,1000000000,1500000000),
+                     labels= c("$0","$500","$1000","$1500"))+
+  theme_classic()+
+  theme(legend.position = "none")+
+  labs(title = 'Revenue by collection', x = 'Collection', y = 'Total revenue(Millions)')
+  
+
+# Bar Plot of  collection
+ggplot(data = full_data[1:3000,], aes(x=collection, y= revenue ,fill=collection))+
+  stat_summary_bin(fun = median , geom = 'bar')+
+  scale_fill_viridis(discrete = TRUE, option = 'D' , begin = 0.3 ,end = .8)+
+  scale_y_continuous(breaks = c(0,250000000,50000000,70000000),
+                     labels= c("$0","$25","$50","$70"))+
+  theme_classic()+
+  theme(legend.position = "none")+
+  labs(title = 'Revenue by collection', x = 'Collection', y = 'Median revenue(Millions)')
+  
+```
+
+On average, movies that are in collections seem to be getting higher revenues as seen from the box plot and bar plot.
+
+<br>
+
+## Main genre
+
+Will  extract the first genre from the `genres` strings to get the main genre for each movie. First, create a vector with the genres we want to extract.Next, we will extract the genres and add them to a new variable called `main_genre.`
+```{r}
+genres_matching_point <- "Comedy|Horror|Action|Drama|Documentary|Science Fiction|Crime|Fantasy|Thriller|Animation|Adventure|Mystery|War|Romance|Music|Family|Western|History|TV Movie|Foreign"
+
+full_data$main_genre <- str_extract(full_data$genres, genres_matching_point)
+```
+
+
+Next, plot `main_genre` to find (1) how many movies are there per genre and (2) the median revenue  by genre.
+
+```{r out.width=c('50%', '50%'), fig.show='hold', echo=FALSE}
+# Movie counts by main genre
+ggplot(full_data[1:3000,], aes(x=fct_infreq(main_genre), fill= main_genre))+
+  geom_bar()+
+  scale_fill_viridis(discrete = TRUE, option = 'D', begin = 0, end=1)+
+  ylim(0,1000)+
+  coord_flip()+
+  theme_classic()+
+  theme(legend.position = 'none')+
+  labs(title = 'Genre by Count', x= 'Genre', y= 'Count')
+
+# Median revenue by main genre
+ggplot(full_data[1:3000,], aes(x=fct_infreq(main_genre),y=revenue, fill= main_genre))+
+  stat_summary_bin(fun = median, geom = 'bar')+
+  scale_fill_viridis(discrete = TRUE, option = 'D', begin = 0, end=1)+
+  scale_y_continuous(breaks = c(0,250000000,50000000,70000000),
+                     labels= c("$0","$25","$50","$70"))+
+  theme_classic()+
+  coord_flip()+
+  theme(legend.position = 'none')+
+  labs(title = 'Median revenue by genre', x= 'Genre', y= 'Median revenue (Millions)')
+
+```
+Different genres seem to be making different revenues.Adventure movies seem to have the highest median revenue, followed by science fiction.The median values of genres with few counts, such as TV movie might be over / underestimated due to small sample sizes. 
+
+<br>
+
+## Production company id
+
+Extract the first (and main) production company id from `production_companies` and create a new variable `prod_comp_id.`
+```{r}
+full_data$prod_comp_id <- str_extract(full_data$production_companies,
+                                      pattern = "([0-9]+)")
+```
+
+```{r}
+str(full_data$prod_comp_id)
+```
+
+Plotting this variable to see how it affects revenue.
+
+```{r fig.height=3.5,fig.width=5,fig.align='center', echo=FALSE}
+# Make `prod_comp_id` an integer
+full_data$prod_comp_id <-as.integer(full_data$prod_comp_id)
+
+# Scatter plot : revenue by prod_comp_id
+ggplot(full_data[1:3000,],aes(x=prod_comp_id, y= revenue, color= prod_comp_id))+
+  geom_point()+
+  scale_fill_viridis(begin = 0, end = 0.95, option='D')+
+  geom_smooth(method='lm', color= 'red3', fill='red3')+
+  scale_y_continuous(breaks = c(0,500000000,1000000000,1500000000),
+                     labels= c("$0","$500","$1000","$1500"))+
+  theme_classic()+
+  theme(legend.position = 'none')+
+  labs(title="Revenue by production company id",x= "Production company id", y= "Revenue(Millions)")
+  
+```
+
+Production companies with  lower numbered id's seem to be making more revenue compared to those with higher id's.
+Checking correlation to confirm this.
+
+```{r}
+cor(full_data$revenue,full_data$prod_comp_id,use = 'complete.obs')
+```
+A *small* negative correlation seems to be present.
+
+<br>
+
+## Top production companies.
+
+Extraction the main production companies from `production_companies`.
+```{r}
+full_data$prod_comp_name <-gsub('(^\\[\\{\'name\'\\:\\s\'|\'\\,\\s\'id.*)', '',full_data$production_companies)
+```
+
+
+Check the  top production companies ordered by number of movies produced.
+```{r rows.print=5}
+full_data[1:3000,]%>%
+  group_by(prod_comp_name)%>%
+  summarise(movie_count = n())%>%
+  arrange(desc(movie_count))%>%
+  filter(!is.na(prod_comp_name))%>%
+  head(10)
+```
+
+Creating  a new variable called top_prod_comp (top production companies). Create a separate category for each production company that has produced at least  60 movies that are present in our data set. All other production companies , including NAs  get put into 'other' category.
+
+```{r}
+full_data$top_prod_comp[full_data$prod_comp_name == 'Universal Pictures'] <- 'Universal Pictures'
+full_data$top_prod_comp[full_data$prod_comp_name == 'Paramount Pictures'] <- 'Paramount Pictures'
+full_data$top_prod_comp[full_data$prod_comp_name == ' Twentieth Century Fox Film Corporation'] <-'Twentieth Century Fox Film Corporation'
+full_data$top_prod_comp[full_data$prod_comp_name == 'Columbia Pictures'] <- 'Columbia Pictures'
+full_data$top_prod_comp[full_data$prod_comp_name == 'New Line Cinema'] <-'New Line Cinema'
+full_data$top_prod_comp[full_data$prod_comp_name == 'Warner Bros.'] <-'Warner Bros.'
+full_data$top_prod_comp[full_data$prod_comp_name == 'Walt Disney Pictures'] <-'Walt Disney Pictures'
+
+full_data$top_prod_comp[is.na(full_data$prod_comp_name)] <-'Other'
+```
+
+Looking  at the effect of this variable on revenue.
+
+```{r, out.width=c('50%','50%'), fig.show='hold', echo=FALSE}
+# Box plot of revenue by 'top_prod_comp'
+ggplot(full_data[1:3000,],aes(x=top_prod_comp, y= revenue, color= top_prod_comp))+
+  geom_boxplot()+
+  scale_fill_viridis(discrete = TRUE,begin = 0, end = 1, option='D')+
+  scale_y_continuous(breaks = c(0,500000000,1000000000,1500000000),
+                     labels= c("$0","$500","$1000","$1500"))+
+  coord_flip()+
+  theme_classic()+
+  theme(legend.position = 'none')+
+  labs(title="Revenue by top production companies",x= "Top Production companies", y= "Revenue(Millions)")
+
+# Bar plot of median revenue by top_prod_comp
+
+ggplot(full_data[1:3000,],aes(x=top_prod_comp, y= revenue, fill= top_prod_comp))+
+  stat_summary_bin(fun = median, geom = 'bar')+
+  #scale_fill_viridis(palette=1)+
+  scale_fill_viridis(discrete=TRUE,begin= 0, end = 1, option='D')+
+  scale_y_continuous(breaks = c(0,500000000,1000000000,1500000000),
+                     labels= c("$0","$500","$1000","$1500"))+
+  coord_flip()+
+  theme_classic()+
+  theme(legend.position = 'none')+
+  labs(title="Revenue by top production companies",x= "Top Production companies", y= "Revenue(Millions)")
+```
+
+It  can  be seen that the average revenue for alot of top production companies is higher than the 'other' production companies.
+
+<br>
+
+## Production company size
+
+Creating `prod_comp_size` (production company size -- *big producer* v. *small producer*). Assign companies that have at least 60 movies each as  big producers and all the rest as small producers. Assume that all NAs are small producers.
+```{r}
+full_data$prod_comp_size[full_data$prod_comp_name == 'Universal Pictures']<- 'Big Producer'
+full_data$prod_comp_size[full_data$prod_comp_name == 'Paramount Pictures']<- 'Big Producer'
+full_data$prod_comp_size[full_data$prod_comp_name =='Twentieth Century Fox Film Corporation']<- 'Big Producer'
+full_data$prod_comp_size[full_data$prod_comp_name =='Columbia Pictures']<- 'Big Producer'
+full_data$prod_comp_size[full_data$prod_comp_name =='New Line Cinema']<- 'Big Producer'
+full_data$prod_comp_size[full_data$prod_comp_name =='Warner Bros.']<- 'Big Producer'
+full_data$prod_comp_size[full_data$prod_comp_name == 'Walt Disney Pictures']<- 'Big Producer'
+full_data$prod_comp_size[is.na(full_data$prod_comp_size)]<- 'Small Producer'
+```
+
+Looking at how the new data affects revenue.
+
+```{r out.width=c("50%","50%"),fig.show= 'hold', echo=FALSE}
+# Box plot of revenue by 'prod_comp_size'
+ggplot(full_data[1:3000,],aes(x= prod_comp_size, y= revenue, color= prod_comp_size))+
+  geom_boxplot()+
+  scale_fill_viridis(discrete = TRUE,begin = 0, end = 1, option='D')+
+  scale_y_continuous(breaks = c(0,500000000,1000000000,1500000000),
+                     labels= c("$0","$500","$1000","$1500"))+
+ 
+  theme_classic()+
+  theme(legend.position = 'none')+
+  labs(title="Revenue by production company size",x= "Production company size", y= "Revenue(Millions)")
+
+# Bar plot of median revenue by top_prod_comp
+
+ggplot(full_data[1:3000,],aes(x= prod_comp_size, y= revenue, fill= prod_comp_size))+
+  stat_summary_bin(fun = median, geom = 'bar')+
+  #scale_fill_viridis(palette=1)+
+  scale_fill_viridis(discrete=TRUE,begin= 0, end = 1, option='D')+
+  scale_y_continuous(breaks = c(0,500000000,1000000000,1500000000),
+                     labels= c("$0","$500","$1000","$1500"))+
+  theme_classic()+
+  theme(legend.position = 'none')+
+  labs(title="Revenue by production company size",x= "Production company size", y= "Revenue(Millions)")
+```
+
+It  can be seen that big production companies are, on average, making more than smaller production comapnies.
