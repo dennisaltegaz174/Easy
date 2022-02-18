@@ -1,0 +1,15 @@
+library(readxl)
+dataz<-read_excel("C://Users//adm//Downloads//medical error  2nd quater fy 2021 2022.xls")
+head(dataz)
+data1 <-subset(dataz,N4PATIENTL=="WARD 7A")
+data2 <-subset(dataz,N4PATIENTL=="WARD 7B")
+data3 <-subset(dataz,N4PATIENTL=="WARD 7C")
+data4 <- subset(dataz,N4PATIENTL=="WARD 7D")
+data5 <- subset(dataz,N4PATIENTL=="WARD 8A")
+data6 <- subset(dataz,N4PATIENTL=="WARD 8B")
+data7 <- subset(dataz,N4PATIENTL=="WARD 8C")
+data8 <- subset(dataz,N4PATIENTL=="WARD 8D")
+data9 <- subset(dataz,N4PATIENTL=="MOPC")
+data9
+medicine <-rbind(data1,data2,data3,data4,data5,data6,data7,data8,data9)
+
