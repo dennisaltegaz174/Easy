@@ -1,0 +1,66 @@
+---
+name: Dennis
+surname: Murithi
+position: "Student"
+address: "Nairobi"
+phone: +254 703 431 748
+profilepic: "C:/Users/adm/Pictures/Saved Pictures/DSC_9385 (2).jpg"
+email: "dennisaltegaz@gmail.com"
+twitter: altegazDennis
+github: dennisaltegaz174
+linkedin: dennisaltegaz174
+date: "`r format(Sys.time(), '%B %Y')`"
+aboutme: "I have been doing data science  in a variety of languages for over 2+ years. I have a deep driven passion for machine learning / artificial inteligence, automation, and data science."
+output: vitae::twentyseconds
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+library(vitae)
+```
+
+# Education
+
+```{r}
+library(tibble)
+tribble(
+  ~ Degree, ~ Year, ~ Institution, ~ Where,
+  "Applied Statistics with computing", "2018 – 2021", "Moi University", "Eldoret, Kenya",
+  "Kenya Certificate of Secondary Education", "2014-2017", "Moi High school ~ Mbiruri", "Embu, Kenya",
+  "Kenya Certificate of Primary Education", "2005-2013", "The Lighthouse Academy", "Nairobi, Kenya"
+) %>% 
+  detailed_entries(Degree, Year, Institution, Where)
+```
+
+# Work Experience
+
+```{r}
+tribble(
+  ~Year, ~Type, ~Desc,
+  2018, "Data science", "Works as a data scientist / analyist as a freelancer  ",
+  2019, "enumarator", "National census enumerator"
+) %>% 
+  brief_entries(
+    glue::glue("Work Experience in {Type}"),
+    Year, 
+    Desc
+  )
+```
+
+# Skills
+
+```{r}
+library(tibble)
+skills <- tribble(
+  ~area, ~skills,
+  "Programming Languages","Python, R, T-SQL, PL-SQL",
+  "Markup Languages", " HTML, LaTeX, Markdown, RMarkdown",
+  "Other Languages", "YAML",
+  "Version Control", "Git",
+  "Text Editors", "RStudio,VIM, Visual Studio, Visual Studio Code",
+  "Microsoft Office", "Excel, Outlook, PowerBI, PowerPoint, Word"
+) %>% 
+    brief_entries(area, skills)
+```
+  
+  
