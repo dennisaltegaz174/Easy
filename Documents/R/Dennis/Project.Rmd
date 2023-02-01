@@ -1,0 +1,233 @@
+---
+title: "Untitled"
+author: "Dennis Murithi"
+date: "30/01/2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+data <- read.csv("C:/Users/adm/Desktop/project/data_women.csv")
+#summary(data)
+```
+
+```{r}
+library(ggplot2)
+ggplot(data = data, aes(x = factor(Number.of.different.people.had.sex.in.your.lifetime)))+
+  geom_bar()
+```
+
+```{r}
+dt1 <-data$Number.of.different.people.had.sex.in.your.lifetime
+dt2<- data[,171:217]
+dt3<-cbind(dt1,dt2)
+#dt3$dt1 <-dt3$different_people
+```
+
+
+```{r}
+dt4 <- dt3
+colnames(dt4)[1]<-"No.diff_sexual_partners"
+library(reshape2)
+dt5 <-melt(dt4,id = "No.diff_sexual_partners")
+```
+
+
+```{r}
+ggplot(data = dt5, aes(x = variable, fill = factor(No.diff_sexual_partners)))+
+  geom_bar(position = "dodge")+
+  theme(axis.text.x = element_blank())
+```
+
+
+
+```{r}
+ggplot(data = dt5, aes(x = variable, fill = factor(No.diff_sexual_partners)))+
+  geom_bar(stat = "count")+
+  theme(axis.text.x = element_blank())
+```
+
+```{r}
+dt6 <- dt5
+dt6<-dt6[1:300,]
+```
+
+```{r}
+ggplot(data = dt6, aes(x = variable, fill = factor(No.diff_sexual_partners)))+
+  geom_bar(stat = "count", position = "dodge")+
+  theme(axis.text.x = element_blank())
+```
+
+```{r}
+library(dplyr)
+mean_partners_by_county <- dt5 %>%
+  mutate(`No.diff_sexual_partners` = ifelse(is.na(`No.diff_sexual_partners`), mean(`No.diff_sexual_partners`, na.rm = TRUE), `No.diff_sexual_partners`)) %>%
+  group_by(variable) %>%
+  summarise(mean_partners = mean(dt5$No.diff_sexual_partners))
+
+```
+
+
+```{r}
+mean_partners_by_county <- dt5 %>%
+  mutate(`No.diff_sexual_partners` = ifelse(is.na(`No.diff_sexual_partners`), mean(table(`No.diff_sexual_partners`, na.rm = TRUE), `No.diff_sexual_partners`))) %>%
+  group_by(variable) %>%
+  summarise(mean_partners = mean(`No.diff_sexual_partners`))
+
+```
+
+```{r}
+mean_partners_by_county <- dt5 %>%
+  group_by(variable) %>%
+  summarise(mean_partners = mean(`No.diff_sexual_partners`,na.rm = TRUE))
+```
+
+
+```{r}
+library(tidyr)
+
+# Reshape the data to wide format
+data_wide <- data %>%
+  pivot_longer(-`Number.of.different.people.had.sex.in.your.lifetime`) %>%
+  mutate(value = ifelse(value == 1, name, NA)) %>%
+  filter(!is.na(value)) %>%
+  select(`Number.of.different.people.had.sex.in.your.lifetime`, value)
+
+```
+
+```{r}
+# Group the data by county and calculate the mean of sexual partners
+mean_partners_by_county <- data_wide %>%
+  group_by(value) %>%
+  summarise(mean_partners = mean(`Number.of.different.people.had.sex.in.your.lifetime`, na.rm = TRUE))
+```
+
+
+```{r}
+counties = c("Baringo","Bomet",'Bungoma', "Busia" ,'Elgeyo.Marakwet','Embu','Garissa' ,'Homa.Bay','Isiolo','Kajiado' ,       
+'Kakamega','kericho','Kiambu' , 'Kilifi', 'Kirinyaga' ,'Kisii','Kisumu' ,'Kitui', 'Kwale'   ,        'Laikipia' ,'Lamu' ,  'Machakos'  ,'Makueni' , 'Mandera'  ,"Marsabit" ,'Meru' ,  'Migori', 'Mombasa'   ,      'Muranga' ,    'Nairobi' ,'Nakuru' ,"Nandi"  , "Narok" , 'Nyamira',  'Nyandarua'   ,   
+ 'Nyeri' ,'Samburu' , 'Siaya' , 'Taita.Taveta'   , 'Tana.River'     ,
+ 'Tharaka','Transnzoia','Turkana' , 'Uasin.Gishu' ,'Vihiga'   ,      
+ 'Wajir','West.Pokot' )
+
+#mean_partners_by_county1 <- mean_partners_by_county%>% select(value,mean_~1)%>% filter(value = counties)
+
+
+mean_partners_by_county1<- mean_partners_by_county[c("Baringo","Bomet",'Bungoma', "Busia" ,'Elgeyo.Marakwet','Embu','Garissa' ,'Homa.Bay','Isiolo','Kajiado' ,       
+'Kakamega','kericho','Kiambu' , 'Kilifi', 'Kirinyaga' ,'Kisii','Kisumu' ,'Kitui', 'Kwale'   ,        'Laikipia' ,'Lamu' ,  'Machakos'  ,'Makueni' , 'Mandera'  ,"Marsabit" ,'Meru' ,  'Migori', 'Mombasa'   ,      'Muranga' ,    'Nairobi' ,'Nakuru' ,"Nandi"  , "Narok" , 'Nyamira',  'Nyandarua'   ,   
+ 'Nyeri' ,'Samburu' , 'Siaya' , 'Taita.Taveta'   , 'Tana.River'     ,
+ 'Tharaka','Transnzoia','Turkana' , 'Uasin.Gishu' ,'Vihiga'   ,      
+ 'Wajir','West.Pokot' ),]
+```
+
+
+
+
+```{r}
+data <- read.csv("C:/Users/adm/Desktop/project/data_women.csv")
+#summary(data)
+```
+
+Analyzing the  missing values in the dataset.
+
+```{r}
+library(tidyverse)
+```
+
+
+
+```{r}
+dt1 <-data$Number.of.people.had.sex.with.in.the.last.12.months
+dt2<- data[,171:217]
+dt3<-cbind(dt1,dt2)
+
+colnames(dt3)[1]<-"Number.of.people.had.sex.with.in.the.last.12.months"
+
+```
+
+1. What is the current state of cheating by partners in kenyan disagregated by counties.
+
+```{r}
+#colnames(dt3)[1]<-"Number.of.different.people.had.sex.in.your.lifetime"
+# Reshape the data to wide format
+data_wide <- dt3 %>%
+  pivot_longer(-`Number.of.people.had.sex.with.in.the.last.12.months`) %>%
+  mutate(value = ifelse(value == 1, name, NA)) %>%
+  filter(!is.na(value)) %>%
+  select(`Number.of.people.had.sex.with.in.the.last.12.months`, value)
+```
+
+```{r}
+# Group the data by county and calculate the mean of sexual partners
+mean_partners_by_county <- data_wide %>%
+  group_by(value) %>%
+  summarise(mean_partners = mean(`Number.of.people.had.sex.with.in.the.last.12.months`, na.rm = TRUE))
+
+#Renaming the columns
+colnames(mean_partners_by_county)[1] <- "County"
+colnames(mean_partners_by_county)[2] <- "mean_partners"
+
+# Filling the  missing values in  the data  using mode
+mean_partners_by_county$mean_partners[is.na(mean_partners_by_county$mean_partners)] <- mean(mean_partners_by_county$mean_partners, na.rm = TRUE)
+
+#mean_partners_by_county_no_na <- mean_partners_by_county %>%filter(!is.na(mean_partners))
+```
+
+```{r}
+ggplot(mean_partners_by_county, aes(x = reorder(County, mean_partners), y = mean_partners)) +
+  geom_col(fill = "steelblue") +
+    labs(x = "County", y = "Mean Partners", title = "Mean Number of Partners by County")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  geom_text(aes(label = round(mean_partners, 2)), vjust = -0.5, size = 3)
+```
+
+# Current state of cheating by partners disaggregated by age 
+
+
+```{r}
+# filling the missing values in age using mode
+
+# converting age to a factor
+data$Age.of.respondent <- as.factor(data$Age.of.respondent)
+
+ggplot(data, aes(x = `Age.of.respondent`, y = `Number.of.people.had.sex.with.in.the.last.12.months`, color = `Age.of.respondent`)) +
+  geom_jitter() +
+  ggtitle("Cheating by Partners Disaggregated by Age") +
+  xlab("Age of Respondent") +
+  ylab("Number of Different People Respondent \n Had Sex With in the last 12 months") +
+  scale_color_discrete(name = "Age of Respondent")+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+```
+
+
+Current state of cheating by partners dis aggregated by age and county
+
+```{r}
+data_2 <- data_wide
+data_2$age_of_the_respondent <-data$Age.of.respondent
+# Renaming the column value to county
+colnames(data_2)[2] <- "county"
+
+data_2$county<- ifelse(data_2$county > 0, "Belongs to a county", "Does not belong to a county")
+
+data_2$age_of_the_respondent <- as.numeric(data_2$age_of_the_respondent)
+data_2$age_group <- cut(data_2$age_of_the_respondent, c(0, 25, 35, 45, 55, 65, 75))
+
+# Calculate mean number of partners by county and age group
+mean_partners_by_county_age <- data_2 %>%
+  group_by(county, age_group) %>%
+  summarise(mean_partners = mean(`Number.of.people.had.sex.with.in.the.last.12.months`, na.rm = TRUE))
+
+# Plot the results
+ggplot(mean_partners_by_county_age, aes(x = age_group, fill = county)) +
+  geom_col(position = "dodge") +
+  ggtitle("Mean Number of Partners by County and Age Group") +
+  xlab("Age Group") +
+  ylab("Mean Number of Partners") +
+  scale_fill_discrete(name = "County")
+
+```
+
